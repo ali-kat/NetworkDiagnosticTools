@@ -2,7 +2,7 @@
 
 ### System Requirements 
 
-This project was developed using Arch Linux __ and Python __. 
+This project was developed using Arch Linux 5.5.16 and Python 3.8.2. 
 
 Please set up BCC on your system first by following these instructions:
 
