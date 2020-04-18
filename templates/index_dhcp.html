@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark bg-dark">
+      <a class="navbar-brand">DHCP Analysis Tool</a>
+      <form class="form-inline">
+      </form>
+    </nav>
+    <div class="container">
+      <span style="font-size: small;">
+        status: <span style="font-size: small;" id="status">connecting...</span>
+      </span>
+      
+      <div class="container">
+        <button type="button" id="discover" class="btn btn-dark">Discover</button>
+        <button type="button" id="request" class="btn btn-dark">Request</button>
+        <button type="button" id="release" class="btn btn-dark">Release</button>
+        <button type="button" id="run" class="btn btn-dark">Run</button>
+      </div>
+
+      <div class="container" id="display">
+      </div>
+    </div>
+
+    <script>
+      const socket = io.connect('http://' + document.domain + ':' + location.port)
+      const status = document.getElementById("status")
+      var text = "";
+
+      $('#discover').on('click', function() {
+        socket.emit('discover') 
+      })
+
+      $('#request').on('click', function() {
+        socket.emit('request') 
+      })
+
+      $('#release').on('click', function() {
+        socket.emit('release') 
+      })
+
+      $('#run').on('click', function() {
+        socket.emit('run') 
+      })
+
+      socket.on('discover', function(data) {
+        console.log(data) 
+        if(data.request === -1){
+          text += "<h1> ERROR SENDING DISCOVER PACKET </h1>"
+        }
+        text = "" 
+        text += "<h4> Discover Packet (SENT) </h4>";
+        text += "<p>" + data.discover + "</p>"; 
+        text += "<h4> Offer Packet (RECEIVED) </h4>";
+        text += "<p>" + data.offer + "</p>"; 
+        display.innerHTML = text;
+      })
+
+      socket.on('request', function(data) {
+        console.log(data) 
+        if(data.request == -1){
+          text += "<h1> ERROR SENDING REQUEST PACKET </h1>"
+        }
+        text += "<h4> Request Packet (SENT) </h4>";
+        text += "<p>" + data.request + "</p>"; 
+        text += "<h4> ACK Packet (RECEIVED) </h4>";
+        text += "<p>" + data.ack + "</p>"; 
+        display.innerHTML = text;
+      })
+
+      socket.on('release', function(data) {
+        console.log(data) 
+        text += "<h4> Release Packet (SENT) </h4>";
+        text += "<p>" + data.release + "</p>"; 
+        display.innerHTML = text;
+      })
+
+      socket.on('run', function(data) {
+        console.log(data) 
+        if(data.discover === -1 || data.request === -1){
+          text += "<h1> ERROR CONNECTING TO DHCP SERVER </h1>"
+        }
+        text = ""
+        text += "<h4> Discover Packet (SENT) </h4>";
+        text += "<p>" + data.discover + "</p>"; 
+        text += "<h4> Offer Packet (RECEIVED) </h4>";
+        text += "<p>" + data.offer + "</p>"; 
+        text += "<h4> Request Packet (SENT) </h4>";
+        text += "<p>" + data.request + "</p>"; 
+        text += "<h4> ACK Packet </h4>";
+        text += "<p>" + data.ack + "</p>"; 
+        text += "<h4> Release Packet (SENT) </h4>";
+        text += "<p>" + data.release + "</p>"; 
+        display.innerHTML = text;
+      })
+
+      socket.on("connect", () => {
+        status.innerHTML = '<span style="background-color: lightgreen;">connected</span>'
+        }
+      )
+
+      socket.on("disconnect", () => {
+        status.innerHTML = '<span style="background-color: #ff8383;">disconnected</span>'
+      })
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <!-- Table CSS -->
+    <style>
+      #container {
+          height: 400px;
+      }
+      .highcharts-figure, .highcharts-data-table table {
+          min-width: 310px;
+          max-width: 800px;
+          margin: 1em auto;
+      }
+      #gethostlatency caption {
+          padding: 1em 0;
+          font-size: 1.2em;
+          color: #555;
+      }
+    </style>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+    <!-- This better work! -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/data.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark bg-dark">
+      <a class="navbar-brand">DNS Analysis Toolkit</a>
+      <form class="form-inline">
+        <input id="myInput" onkeyup="filter()" class="form-control mr-sm-2" type="text" placeholder="Filter" aria-label="Filter">
+      </form>
+    </nav>
+    <div class="container">
+      
+      <span style="font-size: small;">
+        status: <span style="font-size: small;" id="status">connecting...</span>
+      </span>
+
+      <ul class="nav nav-tabs">
+        <li class="nav-item">
+          <a class="nav-link active" data-toggle="tab" href="#gethostlatency">gethostlatency.py</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="tab" href="#outgoing">Outgoing DNS Packets</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="tab" href="#incoming">Incoming DNS Packets</a>
+        </li>
+      </ul>
+
+      <div class="tab-content"> 
+        <div id="gethostlatency" class="tab-pane fade show active">
+          <figure class="highcharts-figure">
+            <div id="container"></div>
+            <table id="daTable" class="table table-hover table-sm table-bordered table-striped table-dark">
+              <thead>
+                <tr>
+                  <th scope="col">TIME</th>
+                  <th scope="col">PID</th>
+                  <th scope="col">COMM</th>
+                  <th scope="col">LAT(ms)</th>
+                  <th scope="col">HOST</th>
+                </tr>
+              </thead>
+              <tbody id="display">
+              </tbody>
+            </table>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const socket = io.connect('http://' + document.domain + ':' + location.port)
+      const status = document.getElementById("status")
+      var text = "";
+      var received = [];
+      var data = [];
+      var variable = [];
+
+      function filter() {
+        var input, filter, table, tr, td, cell, i, j;
+        input = document.getElementById("myInput");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("daTable");
+        tr = table.getElementsByTagName("tr");
+        for (i = 1; i < tr.length; i++) {
+          // Hide the row initially.
+          tr[i].style.display = "none";
+        
+          td = tr[i].getElementsByTagName("td");
+          for (var j = 0; j < td.length; j++) {
+            cell = tr[i].getElementsByTagName("td")[j];
+            if (cell) {
+              //if (cell.innerHTML.toUpperCase().localeCompare(filter)){
+              if (cell.innerHTML.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+                break;
+              }
+               
+            }
+          }
+        }
+      }
+
+      socket.on("output", function(data){
+        received.unshift(data.output)
+        if(received.length > 1){
+          var i, j;
+          text = "";
+          data = new Array(received.length);          
+          for (i = 0; i < received.length; i++) {
+            text += '<tr>';
+            data[i] = new Array(2);
+            data[i][0] = received[i][4]
+            data[i][1] = parseFloat(received[i][3])
+            for (j = 0; j < received[i].length; j++){
+              text += '<td>' + received[i][j] + '</td>';
+            }
+            text += '</tr>';
+          } 
+          display.innerHTML = text;
+          variable = data;
+          Highcharts.chart('container', {
+          chart: {
+              type: 'column'
+          },
+          title: {
+              text: 'Host Latency'
+          },
+          xAxis: {
+              type: 'category',
+              labels: {
+                  rotation: -45,
+                  style: {
+                      fontSize: '13px',
+                      fontFamily: 'Verdana, sans-serif'
+                  }
+              }
+          },
+          yAxis: {
+              min: 0,
+              title: {
+                  text: 'LATENCY (ms)'
+              }
+          },
+          legend: {
+              enabled: false
+          },
+          tooltip: {
+              pointFormat: '{point.y} ms'
+          },
+          series: [{
+              name: 'Population',
+              data: variable,
+              dataLabels: {
+                  enabled: true,
+                  rotation: -90,
+                  color: '#FFFFFF',
+                  align: 'right',
+                  format: '{point.y:.1f}', // one decimal
+                  y: 10, // 10 pixels down from the top
+                  style: {
+                      fontSize: '13px',
+                      fontFamily: 'Verdana, sans-serif'
+                  }
+              }
+          }]
+      });
+        }
+      })
+
+      socket.on("connect", () => {
+        status.innerHTML = '<span style="background-color: lightgreen;">connected</span>'
+        }
+      )
+
+      socket.on("disconnect", () => {
+        status.innerHTML = '<span style="background-color: #ff8383;">disconnected</span>'
+      })
+    </script>
+  </body>
+</html>
